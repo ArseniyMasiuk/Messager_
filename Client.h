@@ -2,7 +2,11 @@
 
 #include "Libraries.h"
 
+/*
 
+перевіряти чи сервер відєднався від клієнта
+
+*/
 void reading(int sock)
 {
 	while (true)

@@ -2,6 +2,7 @@
 #include "Client.h"
 #include "Server.h"
 
+//192.168.5.218
 
 int main()
 {
@@ -12,8 +13,6 @@ int main()
 	cin >> i;
 	if (i == 1) CLIENT();
 	if (i == 0) SERVER();
-
-
 
 	return 0;
 }
