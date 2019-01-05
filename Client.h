@@ -7,16 +7,17 @@
 перевіряти чи сервер відєднався від клієнта
 
 */
+bool contin = true;
 void reading(int sock)
 {
-	while (true)
+	while (contin)
 	{
 		if (select(0, (fd_set*)&sock, 0, 0, 0))
 		{
 			char Buff[20] = { '0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0' };
 			recv(sock, Buff, 20, 0);
 			if (Buff[0] != '0')
-				cout << "my message              " << Buff << endl;
+				cout << "server         " << Buff << endl;
 		}
 	}
 
@@ -26,7 +27,7 @@ void CLIENT()
 {
 
 	cout << "enter your IP\n";
-	cin >> MY_ADDRESS;
+	//cin >> MY_ADDRESS;
 
 	WSADATA wData;
 	//WORD version_request;
@@ -69,17 +70,23 @@ void CLIENT()
 
 	thread th([&]() {reading(Sock); });
 
-	while (true)
+	
+	while (contin)
 	{
 		string mess;
 		cin >> mess;
-
+		if (mess == "false") contin = false;
+		else
+			send(Sock, mess.c_str(), 20, 0);
 		//cout << "my mess  " << mess << "   " << mess.c_str() << endl;
 
-		send(Sock, mess.c_str(), 20, 0);
+		
 	}
 	cout << "sended\n";
 	cout << "all is good\n";
+	shutdown(Sock, 2);
 	closesocket(Sock);
+	WSACleanup();
 	cout << "closed\n";
+	th.join();
 }

@@ -2,7 +2,9 @@
 #include "Client.h"
 #include "Server.h"
 
-//192.168.5.218
+/*
+192.168.5.218
+*/
 
 int main()
 {

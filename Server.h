@@ -39,7 +39,7 @@
 void SERVER()
 {
 	cout << "enter your IP\n";
-	cin >> MY_ADDRESS;
+	//cin >> MY_ADDRESS;
 
 	WSADATA wData;
 	//WORD version_request;
@@ -77,17 +77,19 @@ void SERVER()
 
 	cout << "                                    listen  " << listen(Sock, SOMAXCONN) << endl;
 
-
 	system("pause");
 	
 	set<int> Clients;
+
+
 
 	while (true)
 	{
 		fd_set Set;
 		FD_ZERO(&Set);
 		FD_SET(Sock, &Set);
-		int maxElem = 0;
+		int maxElem;
+		maxElem = 0;
 		for (auto iter = Clients.begin(); iter != Clients.end(); iter++)
 		{
 			FD_SET(*iter, &Set);
@@ -98,23 +100,33 @@ void SERVER()
 
 		select(Max + 1, &Set, NULL, NULL, NULL);
 
-		for (auto iter = Clients.begin(); iter != Clients.end(); iter++)
+		for (auto iter = Clients.begin(); iter != Clients.end();)
 		{
 			if (FD_ISSET(*iter, &Set))
 			{
 				static char buffer[1024];
 				int RecvSize = recv(*iter, buffer, sizeof(buffer), 0);
 				cout << buffer << endl;
+				if (RecvSize != 0)
+				{
+					send(*iter, buffer, RecvSize, 0);
+				}
 				if ((RecvSize == 0) && (errno != EAGAIN))
 				{
 					shutdown(*iter,2);
 					closesocket(*iter);
-					Clients.erase(iter);
+					iter = Clients.erase(iter);
+					maxElem = 0;
 				}
-				else if (RecvSize!=0)
+				else
 				{
-					send(*iter, buffer, RecvSize, 0);
+					iter++;
 				}
+				
+			}
+			else
+			{
+				iter++;
 			}
 		}
 		if (FD_ISSET(Sock, &Set))
@@ -131,9 +143,6 @@ void SERVER()
 	}
 
 
-
-
-
 	//завершення роботи сервера
 	for (auto iter = Clients.begin(); iter != Clients.end(); iter++)
 	{
@@ -143,4 +152,6 @@ void SERVER()
 	}
 
 	closesocket(Sock);
+
+	WSACleanup();
 }
