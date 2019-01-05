@@ -4,6 +4,10 @@
 #include <set>
 #include <algorithm>
 
+
+#define POOL_SIZE 1024
+
+
 /*
 
 перевіряти чи клієнт відєднався від сервера
@@ -82,63 +86,65 @@ void SERVER()
 	set<int> Clients;
 
 
+	struct pollfd Set[POOL_SIZE];
+	Set[0].fd = Sock;
+	Set[0].events = POLLIN;
+
+	
 
 	while (true)
 	{
-		fd_set Set;
-		FD_ZERO(&Set);
-		FD_SET(Sock, &Set);
-		int maxElem;
-		maxElem = 0;
+		unsigned int index = 1;
+
 		for (auto iter = Clients.begin(); iter != Clients.end(); iter++)
 		{
-			FD_SET(*iter, &Set);
-			maxElem = *iter;
+			Set[index].fd = *iter;
+			Set[index].events = POLLIN;
+			index++;
 		}
 
-		int Max = max(Sock, maxElem);
+		int Size = 1 + Clients.size();
 
-		select(Max + 1, &Set, NULL, NULL, NULL);
+		WSAPoll(Set, Size, -1);//on windows, on linux is poll(*,*,*);
 
-		for (auto iter = Clients.begin(); iter != Clients.end();)
+		for (int i=0;i<Size;i++)
 		{
-			if (FD_ISSET(*iter, &Set))
+			if (Set[i].revents & POLLIN)
 			{
-				static char buffer[1024];
-				int RecvSize = recv(*iter, buffer, sizeof(buffer), 0);
-				cout << buffer << endl;
-				if (RecvSize != 0)
+				if (i)
 				{
-					send(*iter, buffer, RecvSize, 0);
-				}
-				if ((RecvSize == 0) && (errno != EAGAIN))
-				{
-					shutdown(*iter,2);
-					closesocket(*iter);
-					iter = Clients.erase(iter);
-					maxElem = 0;
+					static char buffer[1024];
+					int RecvSize = recv(Set[i].fd, buffer, sizeof(buffer), 0);
+					cout << buffer << endl;
+
+					if ((RecvSize == 0) && (errno != EAGAIN))
+					{
+						shutdown(Set[i].fd, 2);
+						closesocket(Set[i].fd);
+						 Clients.erase(Set[i].fd);
+
+					}else if (RecvSize != 0)
+					{
+						for (int j = 0; j<Size; j++)
+						{
+							if (j != i) send(Set[j].fd, buffer, RecvSize, 0);
+						}
+					}
+					
 				}
 				else
 				{
-					iter++;
+					int NewConn = accept(Sock, 0, 0);
+
+					DWORD nonBlocking = 1;
+					if (ioctlsocket(Sock, FIONBIO, &nonBlocking) != 0)
+					{
+						cout << "failed to set non-blocking socket\n";
+					}
+					Clients.insert(NewConn);
 				}
 				
 			}
-			else
-			{
-				iter++;
-			}
-		}
-		if (FD_ISSET(Sock, &Set))
-		{
-			int NewConn = accept(Sock, 0, 0);
-
-			DWORD nonBlocking = 1;
-			if (ioctlsocket(Sock, FIONBIO, &nonBlocking) != 0)
-			{
-				cout << "failed to set non-blocking socket\n";
-			}
-			Clients.insert(NewConn);
 		}
 	}
 
