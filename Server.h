@@ -91,7 +91,6 @@ void SERVER()
 	Set[0].events = POLLIN;
 
 	
-
 	while (true)
 	{
 		unsigned int index = 1;
