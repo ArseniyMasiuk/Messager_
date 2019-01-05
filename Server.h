@@ -109,7 +109,11 @@ void SERVER()
 				cout << buffer << endl;
 				if (RecvSize != 0)
 				{
-					send(*iter, buffer, RecvSize, 0);
+					for (auto it = Clients.begin(); it != Clients.end();it++)
+					{
+						if(it!=iter)
+						send(*it, buffer, RecvSize, 0);
+					}
 				}
 				if ((RecvSize == 0) && (errno != EAGAIN))
 				{
