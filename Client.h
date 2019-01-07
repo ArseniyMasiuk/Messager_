@@ -8,16 +8,46 @@
 
 */
 bool contin = true;
+int MyID;
+
+char userName[20];
+
 void reading(int sock)
 {
 	while (contin)
 	{
-		if (select(0, (fd_set*)&sock, 0, 0, 0))
+		fd_set Set;
+		FD_ZERO(&Set);
+		FD_SET(sock, &Set);
+		if (select(1, &Set, 0, 0, 0))//переробити?
 		{
-			char Buff[20] = { '0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0' };
-			recv(sock, Buff, 20, 0);
-			if (Buff[0] != '0')
-				cout << "server         " << Buff << endl;
+			//char Buff[20] = { '0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0' };
+			BUFFER * buffer = (BUFFER *)malloc(MTU);
+			int RecvSize = recv(sock, (char *)buffer, sizeof(buffer), 0);
+			if (RecvSize != 0)
+			{
+				if (buffer->flags == (char)REGISTRATION)
+				{
+					MyID = buffer->receiver;
+					memcpy((char *)buffer->beginOfMess, userName, strlen(userName));
+					buffer->flags = REGISTRATION;
+					buffer->sender = MyID;
+					buffer->receiver = SERVER_ID;
+					buffer->messageSize = sizeof(BUFFER) + strlen(userName) - 1;
+					send(sock, (char *)buffer, buffer->messageSize, 0);
+				}
+				if (buffer->flags == (char)MESSAGE)
+				{
+					cout << "user:"<<buffer->sender<<" " << (char *)buffer->beginOfMess<< endl;
+				}
+
+			}
+			if ((RecvSize == 0) && (errno != EAGAIN))
+			{
+				shutdown(sock, 2);
+				closesocket(sock);
+				contin = false;
+			}
 		}
 	}
 
@@ -26,8 +56,10 @@ void reading(int sock)
 void CLIENT()
 {
 
-	cout << "enter your IP\n";
+	cout << "enter server IP\n";
 	//cin >> MY_ADDRESS;
+	cout << "enter your username\n";
+	cin >> userName;
 
 	WSADATA wData;
 	//WORD version_request;
@@ -65,22 +97,23 @@ void CLIENT()
 
 	cout << connect(Sock, (struct sockaddr*)&sockaddr, sizeof(sockaddr)) << endl;
 	cout << "connected\n";
-
-	send(Sock, "conn", 4, 0);
+	
 
 	thread th([&]() {reading(Sock); });
 
 	
 	while (contin)
 	{
-		string mess;
-		cin >> mess;
-		if (mess == "false") contin = false;
-		else
-			send(Sock, mess.c_str(), 20, 0);
+		if (contin)
+		{
+			string mess;
+			cin >> mess;
+			if (mess == "false") contin = false;
+			else
+				send(Sock, mess.c_str(), 20, 0);
+		}
 		//cout << "my mess  " << mess << "   " << mess.c_str() << endl;
 
-		
 	}
 	cout << "sended\n";
 	cout << "all is good\n";

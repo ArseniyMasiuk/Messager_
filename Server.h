@@ -3,7 +3,7 @@
 #include "Libraries.h"
 #include <set>
 #include <algorithm>
-
+#include <map>
 /*
 
 перевіряти чи клієнт відєднався від сервера
@@ -59,7 +59,8 @@ void SERVER()
 	std::cout << "socket initialized\n";
 
 
-	SOCKET Sock = socket(AF_INET, SOCK_STREAM, 0);
+	SOCKET Sock = socket(AF_INET, SOCK_STREAM, 0);// дописати перевірку помилки
+	
 	cout << "socket   " << Sock << endl;
 	sockaddr_in sockaddr;
 	sockaddr.sin_family = AF_INET;
@@ -79,8 +80,10 @@ void SERVER()
 
 	system("pause");
 	
-	set<int> Clients;
+	//set<int> Clients;
 
+	map<int, string> Clients;
+	//BUFFER * buff  = (BUFFER *)malloc();     //576байт
 
 
 	while (true)
@@ -92,8 +95,8 @@ void SERVER()
 		maxElem = 0;
 		for (auto iter = Clients.begin(); iter != Clients.end(); iter++)
 		{
-			FD_SET(*iter, &Set);
-			maxElem = *iter;
+			FD_SET(iter->first, &Set);
+			maxElem = iter->first;
 		}
 
 		int Max = max(Sock, maxElem);
@@ -102,23 +105,47 @@ void SERVER()
 
 		for (auto iter = Clients.begin(); iter != Clients.end();)
 		{
-			if (FD_ISSET(*iter, &Set))
+			if (FD_ISSET(iter->first, &Set))
 			{
-				static char buffer[1024];
-				int RecvSize = recv(*iter, buffer, sizeof(buffer), 0);
-				cout << buffer << endl;
+				static BUFFER * buffer = (BUFFER *)malloc(MTU);
+				int RecvSize = recv(iter->first, (char *)buffer, sizeof(buffer), 0);
+				//cout << (char *)buffer->beginOfMess << endl;
+
 				if (RecvSize != 0)
 				{
-					for (auto it = Clients.begin(); it != Clients.end();it++)
+					if (buffer->flags == (char)REGISTRATION && buffer->receiver == SERVER_ID)
 					{
-						if(it!=iter)
-						send(*it, buffer, RecvSize, 0);
+						iter->second = (char *)buffer->beginOfMess;
+						cout << "connected: "<<(char *)buffer->beginOfMess << endl;
+					}
+
+					if (buffer->flags == (char)MESSAGE && buffer->receiver == SERVER_ID)
+					{
+						cout << "sended to server: " << iter->second<<": "<< (char *)buffer->beginOfMess << endl;
+						/*when messsage is not in one package use function getAllPackages
+							
+						*/
+					}
+
+					if (buffer->flags == (char)GET_USERS_INFO && buffer->receiver == SERVER_ID)
+					{
+						cout << "asked users informatiom : " << iter->second << endl;
+					}
+
+					if (buffer->flags == (char)MESSAGE && buffer->receiver == TO_ALL)
+					{
+						cout << iter->second << "sended to all users: " << (char *)buffer->beginOfMess << endl;
+						for (auto it = Clients.begin(); it != Clients.end(); it++)
+						{
+							if (it != iter)
+								send(it->first, (char *)buffer, RecvSize, 0);
+						}
 					}
 				}
 				if ((RecvSize == 0) && (errno != EAGAIN))
 				{
-					shutdown(*iter,2);
-					closesocket(*iter);
+					shutdown(iter->first,2);
+					closesocket(iter->first);
 					iter = Clients.erase(iter);
 					maxElem = 0;
 				}
@@ -142,7 +169,9 @@ void SERVER()
 			{
 				cout << "failed to set non-blocking socket\n";
 			}
-			Clients.insert(NewConn);
+			Clients.insert(pair<int,string>(NewConn,""));
+			BUFFER buff((char)REGISTRATION,sizeof(BUFFER),SERVER_ID,NewConn);
+			send(NewConn,(char *)&buff,sizeof(BUFFER),0);
 		}
 	}
 
@@ -150,8 +179,8 @@ void SERVER()
 	//завершення роботи сервера
 	for (auto iter = Clients.begin(); iter != Clients.end(); iter++)
 	{
-		shutdown(*iter, 2);
-		closesocket(*iter);
+		shutdown(iter->first, 2);
+		closesocket(iter->first);
 		Clients.erase(iter);
 	}
 
