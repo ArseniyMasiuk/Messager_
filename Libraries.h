@@ -1,4 +1,5 @@
 #pragma once
+#define _CRT_SECURE_NO_WARNINGS
 
 #pragma comment (lib,"ws2_32.lib")
 
@@ -14,7 +15,7 @@
 using namespace std;
 
 
-string MY_ADDRESS = "192.168.5.218";
+string MY_ADDRESS = "192.168.1.4";//"192.168.5.218";
 #define MTU 1450//#define MTU 1460 //1452 при vpn ше менше Maximum Transmission Unit
 
 //struct USER
@@ -50,6 +51,7 @@ string MY_ADDRESS = "192.168.5.218";
 
 struct BUFFER
 {            
+
 	unsigned short messageSize; //in bytes
 	unsigned short sender;      //like a receiver
 	unsigned short receiver; 
@@ -65,4 +67,5 @@ struct BUFFER
 		this->sender = sender;
 		this->receiver = receiver;
 	}
+	
 };

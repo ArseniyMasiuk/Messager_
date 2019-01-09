@@ -19,7 +19,7 @@
 
 
 
-// переаедення сокета в неблокуючий режим на лінуксі
+// переведення сокета в неблокуючий режим на лінуксі
 
 //int set_nonblock(int fd)
 //{
@@ -108,21 +108,23 @@ void SERVER()
 			if (FD_ISSET(iter->first, &Set))
 			{
 				static BUFFER * buffer = (BUFFER *)malloc(MTU);
-				int RecvSize = recv(iter->first, (char *)buffer, sizeof(buffer), 0);
+				int RecvSize = recv(iter->first, (char *)buffer, MTU, 0);
 				//cout << (char *)buffer->beginOfMess << endl;
 
 				if (RecvSize != 0)
 				{
 					if (buffer->flags == (char)REGISTRATION && buffer->receiver == SERVER_ID)
 					{
-						iter->second = (char *)buffer->beginOfMess;
-						cout << "connected: "<<(char *)buffer->beginOfMess << endl;
+						iter->second = (char *)&buffer->beginOfMess;
+						cout << "connected: " << iter->second << endl;//(char )&buffer->beginOfMess << endl;
 					}
 
 					if (buffer->flags == (char)MESSAGE && buffer->receiver == SERVER_ID)
 					{
-						cout << "sended to server: " << iter->second<<": "<< (char *)buffer->beginOfMess << endl;
-						/*when messsage is not in one package use function getAllPackages
+						cout << "sended to server: " << iter->second<<": "<< (char *)&buffer->beginOfMess << endl;
+						/*
+						
+						when messsage is not in one package use function getAllPackages
 							
 						*/
 					}
@@ -144,10 +146,12 @@ void SERVER()
 				}
 				if ((RecvSize == 0) && (errno != EAGAIN))
 				{
+					cout << "disconnected: " << iter->second << endl;
 					shutdown(iter->first,2);
 					closesocket(iter->first);
 					iter = Clients.erase(iter);
 					maxElem = 0;
+					
 				}
 				else
 				{
@@ -171,7 +175,9 @@ void SERVER()
 			}
 			Clients.insert(pair<int,string>(NewConn,""));
 			BUFFER buff((char)REGISTRATION,sizeof(BUFFER),SERVER_ID,NewConn);
-			send(NewConn,(char *)&buff,sizeof(BUFFER),0);
+
+			int sendsize = send(NewConn,(char *)&buff,sizeof(BUFFER),0);
+			//system("pause");
 		}
 	}
 

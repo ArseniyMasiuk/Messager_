@@ -12,6 +12,7 @@ int MyID;
 
 char userName[20];
 
+
 void reading(int sock)
 {
 	while (contin)
@@ -21,19 +22,29 @@ void reading(int sock)
 		FD_SET(sock, &Set);
 		if (select(1, &Set, 0, 0, 0))//ïåðåðîáèòè?
 		{
-			//char Buff[20] = { '0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0' };
+			//char Buff[MTU];
 			BUFFER * buffer = (BUFFER *)malloc(MTU);
-			int RecvSize = recv(sock, (char *)buffer, sizeof(buffer), 0);
+			int RecvSize = recv(sock, (char *)buffer, MTU, 0);
+			cout << "flags: " << (int)(buffer->flags) << endl;
+			cout << "receiver: " << buffer->receiver << endl;
+			cout << "sender: " << buffer->sender << endl;
+			cout << "messageSize: " << buffer->messageSize << endl;
+			cout << "recv size: " << RecvSize << endl;
+
+			//system("pause");
 			if (RecvSize != 0)
 			{
 				if (buffer->flags == (char)REGISTRATION)
 				{
 					MyID = buffer->receiver;
-					memcpy((char *)buffer->beginOfMess, userName, strlen(userName));
+					strcpy((char *)&buffer->beginOfMess, userName);
+					
+					//memcpy((void *)&(buffer->beginOfMess), (void *)&userName, strlen(userName));
+					//memcpy(Buff, &userName, strlen(userName));
 					buffer->flags = REGISTRATION;
 					buffer->sender = MyID;
 					buffer->receiver = SERVER_ID;
-					buffer->messageSize = sizeof(BUFFER) + strlen(userName) - 1;
+					buffer->messageSize = sizeof(BUFFER) + strlen(userName) + 1;
 					send(sock, (char *)buffer, buffer->messageSize, 0);
 				}
 				if (buffer->flags == (char)MESSAGE)
@@ -44,6 +55,9 @@ void reading(int sock)
 			}
 			if ((RecvSize == 0) && (errno != EAGAIN))
 			{
+				/* ËÀÆÀ ÂÈÐÏÀÂÈÒÈ ÏßÑËß Ô²ÊÑÓ ÁÀÃ²Â!!!!!!!!
+
+				*/
 				shutdown(sock, 2);
 				closesocket(sock);
 				contin = false;
@@ -106,11 +120,22 @@ void CLIENT()
 	{
 		if (contin)
 		{
+			BUFFER * buffer = (BUFFER *)malloc(MTU);
 			string mess;
 			cin >> mess;
 			if (mess == "false") contin = false;
 			else
-				send(Sock, mess.c_str(), 20, 0);
+			{
+				strcpy((char *)&buffer->beginOfMess, mess.c_str());
+
+				//memcpy((void *)&(buffer->beginOfMess), (void *)&userName, strlen(userName));
+				//memcpy(Buff, &userName, strlen(userName));
+				buffer->flags = MESSAGE;
+				buffer->sender = MyID;
+				buffer->receiver = SERVER_ID;
+				buffer->messageSize = sizeof(BUFFER) + mess.size() + 1;
+				send(Sock, (char *)buffer, buffer->messageSize, 0);
+			}
 		}
 		//cout << "my mess  " << mess << "   " << mess.c_str() << endl;
 

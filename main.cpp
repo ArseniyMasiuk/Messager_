@@ -8,7 +8,7 @@
 
 int main()
 {
-
+	
 	cout << "who are you want to be\n enter 0 if you want to be a server\n enter 1 if you want to be a client\n";
 
 	int i = 0;
