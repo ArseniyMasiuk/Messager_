@@ -6,12 +6,15 @@
 
 перевіряти чи сервер відєднався від клієнта
 
+
+якась фігня з зчитуванням даних інших користувачів
 */
 bool contin = true;
 int MyID;
 
 char userName[20];
 
+map<int, string> USERS;
 
 void reading(int sock)
 {
@@ -50,6 +53,17 @@ void reading(int sock)
 				if (buffer->flags == (char)MESSAGE)
 				{
 					cout << "user:"<<buffer->sender<<" " << (char *)buffer->beginOfMess<< endl;
+				}
+
+				if (buffer->flags == (char)GET_USERS_INFO)
+				{
+					USER * user = (USER *)&buffer->beginOfMess;
+					int size = (buffer->messageSize - sizeof(BUFFER) - 1)/sizeof(USER);
+					for (int i = 0; i < size; i++)
+					{
+						USERS.insert(pair<int, string>(user[i].id, user[i].userName));
+						cout <<"user ID: "<< user[i].id << "    user name: " << user[i].userName << endl;
+					}
 				}
 
 			}
@@ -123,6 +137,14 @@ void CLIENT()
 			BUFFER * buffer = (BUFFER *)malloc(MTU);
 			string mess;
 			cin >> mess;
+			if (mess == "get")
+			{
+				buffer->flags = GET_USERS_INFO;
+				buffer->sender = MyID;
+				buffer->receiver = SERVER_ID;
+				buffer->messageSize = sizeof(BUFFER);
+				send(Sock, (char *)buffer, buffer->messageSize, 0);
+			}
 			if (mess == "false") contin = false;
 			else
 			{
@@ -140,7 +162,7 @@ void CLIENT()
 		//cout << "my mess  " << mess << "   " << mess.c_str() << endl;
 
 	}
-	cout << "sended\n";
+	//cout << "sended\n";
 	cout << "all is good\n";
 	shutdown(Sock, 2);
 	closesocket(Sock);

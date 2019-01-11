@@ -8,6 +8,7 @@
 #include <thread>
 #include <vector>
 #include <mutex>
+#include <map>
 
 #include <WS2tcpip.h>
 
@@ -67,5 +68,12 @@ struct BUFFER
 		this->sender = sender;
 		this->receiver = receiver;
 	}
+	
+};
+
+struct USER
+{
+	unsigned int id;
+	char userName[20];
 	
 };

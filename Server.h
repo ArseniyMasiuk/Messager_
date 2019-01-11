@@ -3,7 +3,7 @@
 #include "Libraries.h"
 #include <set>
 #include <algorithm>
-#include <map>
+
 /*
 
 перевіряти чи клієнт відєднався від сервера
@@ -132,6 +132,23 @@ void SERVER()
 					if (buffer->flags == (char)GET_USERS_INFO && buffer->receiver == SERVER_ID)
 					{
 						cout << "asked users informatiom : " << iter->second << endl;
+						USER * users = new USER[Clients.size()-1];
+						for (auto it = Clients.begin(); it != Clients.end(); it++)
+						{
+							if (it != iter)
+							{
+								users->id = it->first;
+								strcpy(users->userName,it->second.c_str());
+								
+							}
+						}
+						memcpy(&buffer->beginOfMess, users, sizeof(users));
+						buffer->messageSize = sizeof(BUFFER) + (sizeof(USER)*Clients.size() - 1) + 1;
+						buffer->sender = SERVER_ID;
+						buffer->receiver = iter->first;
+						buffer->flags = GET_USERS_INFO;
+						send(iter->first, (char *)buffer, buffer->messageSize, 0);
+						delete[] users;
 					}
 
 					if (buffer->flags == (char)MESSAGE && buffer->receiver == TO_ALL)
