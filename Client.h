@@ -28,11 +28,12 @@ void reading(int sock)
 			//char Buff[MTU];
 			BUFFER * buffer = (BUFFER *)malloc(MTU);
 			int RecvSize = recv(sock, (char *)buffer, MTU, 0);
-			cout << "flags: " << (int)(buffer->flags) << endl;
+
+			/*cout << "flags: " << (int)(buffer->flags) << endl;
 			cout << "receiver: " << buffer->receiver << endl;
 			cout << "sender: " << buffer->sender << endl;
 			cout << "messageSize: " << buffer->messageSize << endl;
-			cout << "recv size: " << RecvSize << endl;
+			cout << "recv size: " << RecvSize << endl;*/
 
 			//system("pause");
 			if (RecvSize != 0)
@@ -42,8 +43,7 @@ void reading(int sock)
 					MyID = buffer->receiver;
 					strcpy((char *)&buffer->beginOfMess, userName);
 					
-					//memcpy((void *)&(buffer->beginOfMess), (void *)&userName, strlen(userName));
-					//memcpy(Buff, &userName, strlen(userName));
+					
 					buffer->flags = REGISTRATION;
 					buffer->sender = MyID;
 					buffer->receiver = SERVER_ID;
@@ -52,7 +52,8 @@ void reading(int sock)
 				}
 				if (buffer->flags == (char)MESSAGE)
 				{
-					cout << "user:"<<buffer->sender<<" " << (char *)buffer->beginOfMess<< endl;
+					cout << "user:" << USERS.find(buffer->sender)->second;
+						cout<<": " << (char *)&buffer->beginOfMess << endl;
 				}
 
 				if (buffer->flags == (char)GET_USERS_INFO)
@@ -81,6 +82,30 @@ void reading(int sock)
 
 }
 
+int getUser(string &mess)
+{
+	string user;
+	int i = 0;
+	while(mess[i]!=':')
+	{
+		if (mess[i] == '@')
+		{
+			i++;
+			continue;
+		}
+		user += mess[i];
+		//mess.erase(i);
+		i++;
+		if (mess.size() == i)break;
+	}
+	mess.erase(mess.begin(),mess.begin()+i);
+	for (auto it = USERS.begin(); it != USERS.end(); it++)
+	{
+		if (it->second == user) return it->first;
+	}
+	return TO_ALL;
+	
+}
 void CLIENT()
 {
 
@@ -129,7 +154,8 @@ void CLIENT()
 
 	thread th([&]() {reading(Sock); });
 
-	
+	USERS.insert(pair<int, string>(1, "Server"));
+
 	while (contin)
 	{
 		if (contin)
@@ -145,27 +171,36 @@ void CLIENT()
 				buffer->messageSize = sizeof(BUFFER);
 				send(Sock, (char *)buffer, buffer->messageSize, 0);
 			}
-			if (mess == "false") contin = false;
+			if (mess == "false")
+			{
+				contin = false;
+				cout << ">>>>>>>>>messaging ended<<<<<<<<\n";
+				shutdown(Sock, 2);
+				closesocket(Sock);
+			}
 			else
 			{
-				strcpy((char *)&buffer->beginOfMess, mess.c_str());
+				if (mess[0] == '@')
+				{
+					buffer->receiver = getUser(mess);
 
-				//memcpy((void *)&(buffer->beginOfMess), (void *)&userName, strlen(userName));
-				//memcpy(Buff, &userName, strlen(userName));
-				buffer->flags = MESSAGE;
-				buffer->sender = MyID;
-				buffer->receiver = SERVER_ID;
-				buffer->messageSize = sizeof(BUFFER) + mess.size() + 1;
-				send(Sock, (char *)buffer, buffer->messageSize, 0);
+					strcpy((char *)&buffer->beginOfMess, mess.c_str());
+
+					//memcpy((void *)&(buffer->beginOfMess), (void *)&userName, strlen(userName));
+					//memcpy(Buff, &userName, strlen(userName));
+					buffer->flags = MESSAGE;
+					buffer->sender = MyID;
+					
+					buffer->messageSize = sizeof(BUFFER) + mess.size() + 1;
+					send(Sock, (char *)buffer, buffer->messageSize, 0);
+				}
 			}
 		}
 		//cout << "my mess  " << mess << "   " << mess.c_str() << endl;
 
 	}
 	//cout << "sended\n";
-	cout << "all is good\n";
-	shutdown(Sock, 2);
-	closesocket(Sock);
+	
 	WSACleanup();
 	cout << "closed\n";
 	th.join();

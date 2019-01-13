@@ -119,46 +119,61 @@ void SERVER()
 						cout << "connected: " << iter->second << endl;//(char )&buffer->beginOfMess << endl;
 					}
 
-					if (buffer->flags == (char)MESSAGE && buffer->receiver == SERVER_ID)
-					{
-						cout << "sended to server: " << iter->second<<": "<< (char *)&buffer->beginOfMess << endl;
-						/*
-						
-						when messsage is not in one package use function getAllPackages
-							
-						*/
-					}
-
+					
 					if (buffer->flags == (char)GET_USERS_INFO && buffer->receiver == SERVER_ID)
 					{
 						cout << "asked users informatiom : " << iter->second << endl;
-						USER * users = new USER[Clients.size()-1];
+						//USER * users = new USER[Clients.size()-1];
+						int ii = 0,size = Clients.size() - 1;
+
+						USER *user = (USER *)&buffer->beginOfMess;
 						for (auto it = Clients.begin(); it != Clients.end(); it++)
 						{
 							if (it != iter)
 							{
-								users->id = it->first;
-								strcpy(users->userName,it->second.c_str());
+								user[ii].id = it->first;
+								strcpy(user[ii].userName,it->second.c_str());
+								//cout << "ID: " << it->first << "  name:" << it->second.c_str() << endl;
+								ii++;
 								
 							}
 						}
-						memcpy(&buffer->beginOfMess, users, sizeof(users));
+						/*for (int i = 0; i < Clients.size() - 1; i++)
+						{
+							cout <<"ID: "<<user[i].id << "  name:" << user[i].userName << endl;
+						}*/
+
+						//memcpy(&buffer->beginOfMess, users, sizeof(users));
 						buffer->messageSize = sizeof(BUFFER) + (sizeof(USER)*Clients.size() - 1) + 1;
 						buffer->sender = SERVER_ID;
 						buffer->receiver = iter->first;
 						buffer->flags = GET_USERS_INFO;
 						send(iter->first, (char *)buffer, buffer->messageSize, 0);
-						delete[] users;
+						//delete[] users;
 					}
-
-					if (buffer->flags == (char)MESSAGE && buffer->receiver == TO_ALL)
+					if (buffer->flags == (char)MESSAGE && buffer->receiver == SERVER_ID)
 					{
-						cout << iter->second << "sended to all users: " << (char *)buffer->beginOfMess << endl;
+						cout << "sended to server: " << iter->second << ": " << (char *)&buffer->beginOfMess << endl;
+						/*
+
+						when messsage is not in one package use function getAllPackages
+
+						*/
+					}else if (buffer->flags == (char)MESSAGE && buffer->receiver == TO_ALL)
+					{
+						cout << iter->second << "sended to all users: " << (char *)&buffer->beginOfMess << endl;
 						for (auto it = Clients.begin(); it != Clients.end(); it++)
 						{
 							if (it != iter)
 								send(it->first, (char *)buffer, RecvSize, 0);
 						}
+					}else if (buffer->flags == (char)MESSAGE )
+					{
+						auto it = Clients.find(buffer->receiver);
+						cout << iter->second << " sended to user: " << it->second <<" message: "<<(char *)&buffer->beginOfMess<< endl;
+
+								send(it->first, (char *)buffer, RecvSize, 0);
+						
 					}
 				}
 				if ((RecvSize == 0) && (errno != EAGAIN))

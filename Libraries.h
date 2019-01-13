@@ -16,7 +16,7 @@
 using namespace std;
 
 
-string MY_ADDRESS = "192.168.1.4";//"192.168.5.218";
+string MY_ADDRESS = "127.0.0.1";//"192.168.1.4";//"192.168.5.218";
 #define MTU 1450//#define MTU 1460 //1452 при vpn ше менше Maximum Transmission Unit
 
 //struct USER
